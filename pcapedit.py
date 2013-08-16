@@ -18,6 +18,7 @@ class editor(cmd.Cmd):
     prompt = '>>> '
 
     packets = []
+    editid = None
 
     srcpcap = None
     dstpcap = None
@@ -48,6 +49,27 @@ class editor(cmd.Cmd):
 
     def help_listall(self):
         print 'USAGE: listall'
+
+    def help_edit(self):
+        print 'USAGE: edit <packetid>'
+
+    def do_edit(self, line):
+        if self.packets and len(self.packets) > 0:
+            if line != '':
+                id = int(line)
+                if id >= 0 and id <= (len(self.packets) - 1):
+                    self.editid = id
+                    print 'editing packet id %d' % (
+                            self.editid)
+                else:
+                    print 'packet %d not found! available %d - %d' % (
+                            id,
+                            0,
+                            (len(self.packets) - 1))
+            else:
+                self.help_edit()
+        else:
+            print 'nothing to edit!'
 
     def do_listall(self, line):
         if self.packets and len(self.packets) > 0:
