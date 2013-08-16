@@ -32,6 +32,8 @@ class editor(cmd.Cmd):
 	sport = None
 	dport = None
 
+	editid = None
+
 	def help_load(self):
 		print 'USAGE: loadpcap <pcapfile>'
 
@@ -150,6 +152,30 @@ class editor(cmd.Cmd):
 				self.help_ls()
 		else:
 			print 'nothing to ls!'
+
+
+	def help_edit(self):
+		print 'USAGE: edit <packetid>'
+
+	def do_edit(self, line):
+		if self.packets and len(self.packets) > 0:
+			if line != '':
+				id = int(line)
+				if id >= 0 and id <= (len(self.packets) - 1):
+					self.editid = id
+					print 'editing packet id %d' % (
+							self.editid)
+				else:
+					print 'packet %d not found! available %d - %d' % (
+							id,
+							1,
+							len(self.packets))
+			else:
+				self.help_edit()
+		else:
+			print 'nothing to edit!'
+
+
 
 	def help_summary(self):
 		print 'USAGE: summary <packetid>'
