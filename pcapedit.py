@@ -122,8 +122,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_hexdump()
 		else:
@@ -144,8 +144,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_ls()
 		else:
@@ -163,8 +163,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_summary()
 		else:
@@ -182,8 +182,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_show()
 		else:
@@ -201,8 +201,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_show2()
 		else:
@@ -220,8 +220,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_pdfdump()
 		else:
@@ -239,8 +239,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				self.help_scapycmd()
 		else:
@@ -258,8 +258,8 @@ class editor(cmd.Cmd):
 				else:
 					print 'packet %d not found! available %d - %d' % (
 							id,
-							1,
-							len(self.packets))
+							0,
+							(len(self.packets) - 1))
 			else:
 				wireshark(self.packets)
 		else:
