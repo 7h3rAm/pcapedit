@@ -2,7 +2,8 @@
 
 
 import os, sys
-import cmd, colorama
+
+from cmd2 import Cmd
 
 from datetime import datetime
 
@@ -12,7 +13,7 @@ from scapy.all import *
 from scapy.utils import *
 
 
-class editor(cmd.Cmd):
+class editor(Cmd):
 
     intro = 'PcapEdit - An Interactive Pcap Editor\n'
     prompt = '>>> '
@@ -189,25 +190,6 @@ class editor(cmd.Cmd):
         else:
             print 'nothing to summarize!'
 
-    def help_show(self):
-        print 'USAGE: show <packetid>'
-
-    def do_show(self, line):
-        if self.packets and len(self.packets) > 0:
-            if line != '':
-                id = int(line)
-                if id >= 0 and id <= (len(self.packets) - 1):
-                    print self.packets[id].show()
-                else:
-                    print 'packet %d not found! available %d - %d' % (
-                            id,
-                            0,
-                            (len(self.packets) - 1))
-            else:
-                self.help_show()
-        else:
-            print 'nothing to show!'
-
     def help_show2(self):
         print 'USAGE: show2 <packetid>'
 
@@ -283,10 +265,6 @@ class editor(cmd.Cmd):
                 wireshark(self.packets)
         else:
             print 'nothing to show in wireshark!'
-
-    def do_quit(self, line):
-        print
-        sys.exit()
 
     def do_EOF(self, line):
         print
