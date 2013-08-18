@@ -282,6 +282,16 @@ class editor(Cmd):
         else:
             print 'Nothing to edit! Use \'analyze\' first.'
 
+    def help_outpcap(self):
+        print 'USAGE: outpcap [pcapname]'
+        print 'Use \'pcapname\' as the name of the pcap for \'save\''
+        print 'To clear such usage, use \'outpcap\' without arguments'
+
+    def do_outpcap(self, line):
+        if line != '': self.outpcap = line
+        else: self.outpcap = None
+        print 'outpcap: %s' % (self.outpcap)
+
     def help_set(self):
         print 'USAGE: set <key> <value> [<key> <value>]'
         print 'Where key: (ether|ip|tcp|udp|dns).field'
@@ -741,22 +751,26 @@ class editor(Cmd):
                         if id >= 0 and id <= (len(self.packets) - 1):
                             outpackets.append(self.packets[id])
 
-                pcapnamelist = self.inpcap.split('.')
-                ext = pcapnamelist[-1]
-                del pcapnamelist[-1]
-                pcapnamelist.append('mod')
-                pcapnamelist.append(ext)
-                self.outpcap = '.'.join(pcapnamelist)
+                if not self.outpcap:
+                    pcapnamelist = self.inpcap.split('.')
+                    ext = pcapnamelist[-1]
+                    del pcapnamelist[-1]
+                    pcapnamelist.append('mod')
+                    pcapnamelist.append(ext)
+                    self.outpcap = '.'.join(pcapnamelist)
+
                 wrpcap(self.outpcap, outpackets)
                 print 'Wrote %d packets to %s' % (len(outpackets), self.outpcap)
 
             else:
-                pcapnamelist = self.inpcap.split('.')
-                ext = pcapnamelist[-1]
-                del pcapnamelist[-1]
-                pcapnamelist.append('mod')
-                pcapnamelist.append(ext)
-                self.outpcap = '.'.join(pcapnamelist)
+                if not self.outpcap:
+                    pcapnamelist = self.inpcap.split('.')
+                    ext = pcapnamelist[-1]
+                    del pcapnamelist[-1]
+                    pcapnamelist.append('mod')
+                    pcapnamelist.append(ext)
+                    self.outpcap = '.'.join(pcapnamelist)
+
                 wrpcap(self.outpcap, self.packets)
                 print 'Wrote %d packets to %s' % (len(self.packets), self.outpcap)
 
