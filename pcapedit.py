@@ -283,18 +283,177 @@ class editor(Cmd):
             print 'Nothing to edit! Use \'analyze\' first.'
 
     def help_set(self):
-        print 'USAGE: set <key> <value>'
+        print 'USAGE: set <key> <value> [<key> <value>]'
         print 'Where key: (ether|ip|tcp|udp|dns).field'
         print 'Valid fields are the ones listed in \'ls\''
 
     def do_set(self, line):
         if self.packets and len(self.packets) > 0:
             if line != '':
-                if self.editid != -1:
-                    editkey = line.split()[0]
+
+                setargslist = line.split()
+
+                if len(setargslist) <= 1:
+                    self.help_set()
+                    return
+
+                if len(setargslist) >= 4:
+                    setkey = setargslist[0]
+                    setproto = setkey.split('.')[0]
+                    setfield = setkey.split('.')[1]
+                    setvalue = setargslist[1]
+
+                    searchkey = setargslist[2]
+                    searchproto = searchkey.split('.')[0]
+                    searchfield = searchkey.split('.')[1]
+                    searchvalue = setargslist[3]
+
+                    if re.search(r'(?i)^ether$', setproto): setproto = 'Ether'
+                    if re.search(r'(?i)^ip$', setproto): setproto = 'IP'
+                    if re.search(r'(?i)^tcp$', setproto): setproto = 'TCP'
+                    if re.search(r'(?i)^udp$', setproto): setproto = 'UDP'
+                    if re.search(r'(?i)^dns$', setproto): setproto = 'DNS'
+
+                    if re.search(r'(?i)^ether$', searchproto): searchproto = 'Ether'
+                    if re.search(r'(?i)^ip$', searchproto): searchproto = 'IP'
+                    if re.search(r'(?i)^tcp$', searchproto): searchproto = 'TCP'
+                    if re.search(r'(?i)^udp$', searchproto): searchproto = 'UDP'
+                    if re.search(r'(?i)^dns$', searchproto): searchproto = 'DNS'
+
+                    print 'Replacing %s.%s to %s where %s.%s is %s' % (setproto, setfield, setvalue, searchproto, searchfield, searchvalue)
+
+                    count = 0
+                    for packet in self.packets:
+                        if packet.haslayer(searchproto) and searchfield in packet[searchproto].fields.keys():
+                            for field in packet[searchproto].fields.keys():
+                                if field == searchfield:
+                                    if searchproto == 'Ether':
+                                        if searchfield == 'src': searchvalue = str(searchvalue)
+                                        elif searchfield == 'dst': searchvalue = str(searchvalue)
+                                        else: searchvalue = int(searchvalue)
+                                    elif searchproto == 'IP':
+                                        if searchfield == 'src': searchvalue = str(searchvalue)
+                                        elif searchfield == 'dst': searchvalue = str(searchvalue)
+                                        elif searchfield == 'options': searchvalue = str(searchvalue)
+                                        else: searchvalue = int(searchvalue)
+                                    else:
+                                        searchvalue = int(searchvalue)
+
+                                    if packet[searchproto].fields[field] == searchvalue:
+                                        if packet.haslayer(setproto) and setfield in packet[setproto].fields.keys():
+                                            for key in packet[setproto].fields.keys():
+                                                if setproto == 'Ether':
+                                                    if key == 'src' and setfield == 'src':
+                                                        oldeditvalue = packet[setproto].src
+                                                        packet[setproto].src = str(setvalue)
+                                                    elif key == 'dst' and setfield == 'dst':
+                                                        oldeditvalue = packet[setproto].dst
+                                                        packet[setproto].dst = str(setvalue)
+                                                    elif key == 'type' and setfield == 'type':
+                                                        oldeditvalue = packet[setproto].type
+                                                        packet[setproto].type = int(setvalue)
+
+                                                elif setproto == 'IP':
+                                                    if key == 'version' and setfield == 'version':
+                                                        oldeditvalue = packet[setproto].version
+                                                        packet[setproto].version = int(setvalue)
+                                                    elif key == 'ihl' and setfield == 'ihl':
+                                                        oldeditvalue = packet[setproto].ihl
+                                                        packet[setproto].ihl = int(setvalue)
+                                                    elif key == 'tos' and setfield == 'tos':
+                                                        oldeditvalue = packet[setproto].tos
+                                                        packet[setproto].tos = int(setvalue)
+                                                    elif key == 'len' and setfield == 'len':
+                                                        oldeditvalue = packet[setproto].len
+                                                        packet[setproto].len = int(setvalue)
+                                                    elif key == 'id' and setfield == 'id':
+                                                        oldeditvalue = packet[setproto].id
+                                                        packet[setproto].id = int(setvalue)
+                                                    elif key == 'flags' and setfield == 'flags':
+                                                        oldeditvalue = packet[setproto].flags
+                                                        packet[setproto].flags = int(setvalue)
+                                                    elif key == 'frag' and setfield == 'frag':
+                                                        oldeditvalue = packet[setproto].frag
+                                                        packet[IP].frag = int(setvalue)
+                                                    elif key == 'ttl' and setfield == 'ttl':
+                                                        oldeditvalue = packet[setproto].ttl
+                                                        packet[setproto].ttl = int(setvalue)
+                                                    elif key == 'proto' and setfield == 'proto':
+                                                        oldeditvalue = packet[setproto].proto
+                                                        packet[setproto].proto = int(setvalue)
+                                                    elif key == 'chksum' and setfield == 'chksum':
+                                                        oldeditvalue = packet[setproto].chksum
+                                                        packet[setproto].chksum = int(setvalue)
+                                                        self.customipchksum = True
+                                                    elif key == 'src' and setfield == 'src':
+                                                        oldeditvalue = packet[setproto].src
+                                                        packet[setproto].src = str(setvalue)
+                                                    elif key == 'dst' and setfield == 'dst':
+                                                        oldeditvalue = packet[setproto].dst
+                                                        packet[setproto].dst = str(setvalue)
+                                                    elif key == 'options' and setfield == 'options':
+                                                        oldeditvalue = packet[setproto].options
+                                                        packet[setproto].options = str(setvalue)
+
+                                                    if not self.customipchksum:
+                                                        packet[setproto].chksum = None
+
+                                                elif setproto == 'TCP':
+                                                    if key == 'sport' and setfield == 'sport':
+                                                        oldeditvalue = packet[setproto].sport
+                                                        packet[setproto].sport = int(setvalue)
+                                                    if key == 'dport' and setfield == 'dport':
+                                                        oldeditvalue = packet[setproto].dport
+                                                        packet[setproto].dport = int(setvalue)
+                                                    if key == 'seq' and setfield == 'seq':
+                                                        oldeditvalue = packet[setproto].seq
+                                                        packet[setproto].seq = int(setvalue)
+                                                    if key == 'ack' and setfield == 'ack':
+                                                        oldeditvalue = packet[setproto].ack
+                                                        packet[setproto].ack = int(setvalue)
+                                                    if key == 'dataofs' and setfield == 'dataofs':
+                                                        oldeditvalue = packet[setproto].dataofs
+                                                        packet[setproto].dataofs = int(setvalue)
+                                                    if key == 'reserved' and setfield == 'reserved':
+                                                        oldeditvalue = packet[setproto].reserved
+                                                        packet[setproto].reserved = int(setvalue)
+                                                    if key == 'flags' and setfield == 'flags':
+                                                        oldeditvalue = packet[setproto].flags
+                                                        packet[setproto].flags = int(setvalue)
+                                                    if key == 'window' and setfield == 'window':
+                                                        oldeditvalue = packet[setproto].window
+                                                        packet[setproto].window = int(setvalue)
+                                                    if key == 'chksum' and setfield == 'chksum':
+                                                        oldeditvalue = packet[setproto].chksum
+                                                        packet[setproto].chksum = int(setvalue)
+                                                        self.customtcpchksum = True
+                                                    if key == 'urgptr' and setfield == 'urgptr':
+                                                        oldeditvalue = packet[setproto].urgptr
+                                                        packet[setproto].urgptr = int(setvalue)
+                                                    if key == 'options' and setfield == 'options':
+                                                        oldeditvalue = packet[setproto].options
+                                                        packet[setproto].options = int(setvalue)
+
+                                                    if not self.customtcpchksum:
+                                                        packet[setproto].chksum = None
+
+                                            print '%6d: %s.%s: %s -> %s (coz %s.%s is %s)' % (
+                                                    count,
+                                                    setproto,
+                                                    setfield,
+                                                    oldeditvalue,
+                                                    setvalue,
+                                                    searchproto,
+                                                    searchfield,
+                                                    searchvalue)
+
+                        count += 1
+
+                elif self.editid != -1:
+                    editkey = setargslist[0]
                     editproto = editkey.split('.')[0]
                     editfield = editkey.split('.')[1]
-                    editvalue = line.split()[1]
+                    editvalue = setargslist[1]
 
                     if re.search(r'(?i)^ether$', editproto):
                         editproto = 'Ether'
@@ -311,8 +470,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][Ether].type
                                 self.packets[self.editid].getlayer(Ether).type = int(editvalue)
                                 print '%6d: Ether.type: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(Ether).type)
-                            else:
-                                print 'Could not find \'Ether.%s\' in packet %d' % (editfield, self.editid)
 
                     elif re.search(r'(?i)^ip$', editproto):
                         editproto = 'IP'
