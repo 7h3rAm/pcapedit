@@ -323,14 +323,38 @@ class editor(Cmd):
                     if re.search(r'(?i)^tcp$', setproto): setproto = 'TCP'
                     if re.search(r'(?i)^udp$', setproto): setproto = 'UDP'
                     if re.search(r'(?i)^dns$', setproto): setproto = 'DNS'
+                    if re.search(r'(?i)^pay$', setproto) and re.search(r'(?i)^load$', setfield): setproto = 'Raw'
 
                     if re.search(r'(?i)^ether$', searchproto): searchproto = 'Ether'
                     if re.search(r'(?i)^ip$', searchproto): searchproto = 'IP'
                     if re.search(r'(?i)^tcp$', searchproto): searchproto = 'TCP'
                     if re.search(r'(?i)^udp$', searchproto): searchproto = 'UDP'
                     if re.search(r'(?i)^dns$', searchproto): searchproto = 'DNS'
+                    if re.search(r'(?i)^pay$', searchproto) and re.search(r'(?i)^load$', searchfield): searchproto = 'Raw'
 
-                    print 'Replacing %s.%s to %s where %s.%s is %s' % (setproto, setfield, setvalue, searchproto, searchfield, searchvalue)
+                    if setproto == 'Raw' and searchproto == 'Raw':
+                        print 'Replacing %s.%s with regex \'%s\' where %s.%s matches regex \'%s\'' % (
+                                setproto,
+                                setfield,
+                                setvalue,
+                                searchproto,
+                                searchfield,
+                                searchvalue)
+
+                        for packet in self.packets:
+                            if packet.haslayer(Raw):
+                                packet[Raw] = re.sub(searchvalue, setvalue, str(packet[Raw]))
+
+                        return
+
+                    else:
+                        print 'Replacing %s.%s to \'%s\' where %s.%s is \'%s\'' % (
+                                setproto,
+                                setfield, 
+                                setvalue,
+                                searchproto,
+                                searchfield,
+                                searchvalue)
 
                     count = 0
                     for packet in self.packets:
@@ -689,6 +713,11 @@ class editor(Cmd):
                                 self.packets[self.editid].getlayer(DNS).ar = int(editvalue)
                                 print '%6d: DNS.ar: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(DNS).ar)
 
+                    elif re.search(r'(?i)^pay$', editproto) and re.search(r'(?i)^load$', editfield):
+                        if Raw in self.packets[self.editid]:
+                            self.packets[self.editid][Raw] = editvalue
+                            print '%6d: pay.load: %s' % (self.editid, self.packets[self.editid].getlayer(Raw))
+
                     else:
                         print 'Unknown proto: %s' % (editproto)
 
@@ -791,8 +820,9 @@ class editor(Cmd):
         print '\t[06] scapycmd ........ show Scapy command to generate a packet'
         print '\t[07] wireshark ....... show a packet in Wireshark'
         print '\t[08] edit ............ select a packet for set operations'
-        print '\t[09] set ............. change value of a protocol field'
-        print '\t[10] save ............ save packets to a pcap'
+        print '\t[09] outpcap ......... set name for output pcap'
+        print '\t[10] set ............. change value of a protocol field'
+        print '\t[11] save ............ save packets to a pcap'
         print
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 [ ] HTTP editing
 [x] outpcap command
 [ ] bpf command
-[ ] regex to edit payload
+[x] regex to edit payload
 
