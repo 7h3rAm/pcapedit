@@ -86,27 +86,16 @@ class editor(Cmd):
 
                 ptime = datetime.fromtimestamp(packet.time).strftime('%Y/%m/%d %H:%M:%S')
                 data = None
+
                 if packet.haslayer(IP):
                     sip = packet.getlayer(IP).src
                     dip = packet.getlayer(IP).dst
 
                     if packet.haslayer(TCP):
-                        l4proto = 'TCP'
                         sport = packet.getlayer(TCP).sport
                         dport = packet.getlayer(TCP).dport
                         flags = packet.getlayer(TCP).flags
 
-                    elif packet.haslayer(UDP):
-                        l4proto = 'UDP'
-                        sport = packet.getlayer(UDP).sport
-                        dport = packet.getlayer(UDP).dport
-
-                    if Raw in packet:
-                        data = packet[Raw]
-                    else:
-                        data = ''
-
-                    if l4proto == 'TCP':
                         flaglist = []
                         if flags & 1: flaglist.append('F')
                         if flags & 2: flaglist.append('S')
@@ -119,23 +108,56 @@ class editor(Cmd):
                         if flags & 256: flaglist.append('N')
                         flagstr = ''.join(flaglist)
 
+                        if Raw in packet:
+                            data = packet[Raw]
+                        else:
+                            data = ''
+
                         if len(data) > 0:
                             summary = '%s (%d bytes)' % (flagstr, len(data))
                         else:
                             summary = '%s' % (flagstr)
-                    elif l4proto == 'UDP':
+
+                        print '%6d: %-15s %23s -> %-23s TCP %s' % (
+                                count,
+                                ptime,
+                                '%s:%s' % (sip, sport),
+                                '%s:%s' % (dip, dport),
+                                summary)
+
+                    elif packet.haslayer(UDP):
+                        sport = packet.getlayer(UDP).sport
+                        dport = packet.getlayer(UDP).dport
+
+                        if Raw in packet:
+                            data = packet[Raw]
+                        else:
+                            data = ''
+
                         if len(data) > 0:
                             summary = '(%d bytes)' % (len(data))
                         else:
                             summary = '(%d bytes)' % (len(packet[3]))
 
-                    print '%6d: %-15s %23s -> %-21s %3s %s' % (
-                            count,
-                            ptime,
-                            '%s:%s' % (sip, sport),
-                            '%s:%s' % (dip, dport),
-                            l4proto,
-                            summary)
+                        print '%6d: %-15s %23s -> %-23s UDP %s' % (
+                                count,
+                                ptime,
+                                '%s:%s' % (sip, sport),
+                                '%s:%s' % (dip, dport),
+                                summary)
+
+                    else:
+                        if Raw in packet:
+                            data = packet[Raw]
+                        else:
+                            data = ''
+
+                        print '%6d: %-15s %23s -> %-23s IP (%d bytes)' % (
+                                count,
+                                ptime,
+                                sip,
+                                dip,
+                                len(data))
 
                 count += 1
         else:
@@ -239,7 +261,7 @@ class editor(Cmd):
 
     def help_edit(self):
         print 'USAGE: edit [packetid]'
-        print 'Use <packetid> for further analysis/editing operations'
+        print 'Use <packetid> for analysis/editing operations'
         print 'To stop editing, use edit without arguments'
 
     def do_edit(self, line):
@@ -263,7 +285,7 @@ class editor(Cmd):
     def help_set(self):
         print 'USAGE: set <key> <value>'
         print 'Where key: (ether|ip|tcp|udp|dns).field'
-        print 'Valid fields are listed in \'ls\''
+        print 'Valid fields are the ones listed in \'ls\''
 
     def do_set(self, line):
         if self.packets and len(self.packets) > 0:
@@ -349,6 +371,9 @@ class editor(Cmd):
                                 self.packets[self.editid].getlayer(IP).options = str(editvalue)
                                 print '%6d: IP.options: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(IP).options)
 
+                            if not self.customipchksum:
+                                self.packets[self.editid].getlayer(IP).chksum = None
+
                     elif re.search(r'(?i)^tcp$', editproto):
                         editproto = 'TCP'
                         if self.packets[self.editid].haslayer(editproto):
@@ -395,8 +420,11 @@ class editor(Cmd):
                                 print '%6d: TCP.urgptr: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).urgptr)
                             elif re.search(r'(?i)^options$', editfield):
                                 oldeditvalue = self.packets[self.editid][TCP].options
-                                self.packets[self.editid].getlayer(TCP).options = (editvalue)
+                                #self.packets[self.editid].getlayer(TCP).options = dict(editvalue)
                                 print '%6d: TCP.options: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).options)
+
+                            if not self.customtcpchksum:
+                                self.packets[self.editid].getlayer(TCP).chksum = None
 
                     elif re.search(r'(?i)^udp$', editproto):
                         editproto = 'UDP'
@@ -417,6 +445,10 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][UDP].chksum
                                 self.packets[self.editid].getlayer(UDP).chksum = int(editvalue)
                                 print '%6d: UDP.chksum: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(UDP).chksum)
+                                customudpchksum = True
+
+                            if not self.customudpchksum:
+                                self.packets[self.editid].getlayer(UDP).chksum = None
 
                     elif re.search(r'(?i)^dns$', editproto):
                         editproto = 'DNS'
@@ -500,37 +532,77 @@ class editor(Cmd):
         else:
             print 'Nothing to set! Use \'analyze\' first.'
 
+    def help_save(line):
+	print 'USAGE: save [packetid]'
+	print 'Save a packetid to pcap'
+	print 'Pass packet ranges as \'save 0-20\' | \'save 5-\' | \'save -10\' | \'save 3-7\''
+	print 'Pass a list of packetids as \'save 3 5 6 10 12\''
+	print 'To save all packets, use \'save\' without arguments'
+
     def do_save(self, line):
         if self.packets and len(self.packets) > 0:
             if line != '':
-		if re.search(r'\d+\s*-\s*\d+', line):
-			start = int(re.findall(r'\d+', line)[0])
-			end = int(re.findall(r'\d+', line)[-1])
-			if start < 0: start = 0
-			if end >= (len(self.packets) - 1): end = (len(self.packets) - 1)
-			print 'Saving from %d to %d' % (start, end)
-			outpackets = []
-			for id in range(start, end+1):
-				outpackets.append(self.packets[id])
-			pcapnamelist = self.inpcap.split('.')
-			ext = pcapnamelist[-1]
-			del pcapnamelist[-1]
-			pcapnamelist.append('mod')
-			pcapnamelist.append(ext)
-			self.outpcap = '.'.join(pcapnamelist)
-			wrpcap(self.outpcap, outpackets)
-			print 'Wrote %d packets to %s' % (len(self.packets), self.outpcap)
-		else:
-			print 'parsing as a list'
-	    else:
-		pcapnamelist = self.inpcap.split('.')
-		ext = pcapnamelist[-1]
-		del pcapnamelist[-1]
-		pcapnamelist.append('mod')
-		pcapnamelist.append(ext)
-		self.outpcap = '.'.join(pcapnamelist)
-		wrpcap(self.outpcap, self.packets)
-		print 'Wrote %d packets to %s' % (len(self.packets), self.outpcap)
+                outpackets = []
+
+                if re.search(r'(\d+)?\s*-\s*(\d+)?', line):
+
+                    offsetlist = re.findall(r'\d+', line)
+                    if len(offsetlist) == 0:
+                        self.help_save()
+                        return
+
+                    if len(offsetlist) > 1:
+                        start = int(offsetlist[0])
+                        end = int(offsetlist[-1])
+
+                    elif re.search(r'\d+\s*-', line):
+                        start = int(re.findall(r'\d+', line)[0])
+                        end = (len(self.packets) - 1)
+
+                    elif re.search(r'\s*-\s*\d+', line):
+                        print ''
+                        end = int(re.findall(r'\d+', line)[0])
+                        start = 0
+
+                    if start < 0 or start > (len(self.packets) - 1):
+                        start = 0
+                    if end >= (len(self.packets) - 1):
+                        end = (len(self.packets) - 1)
+
+                    if start > end:
+                        start = start ^ end
+                        end = start ^ end
+                        start = start ^ end
+
+                    for id in range(start, end+1):
+                        outpackets.append(self.packets[id])
+
+                else:
+                    idlist = line.split()
+                    for id in idlist:
+                        id = int(id)
+                        if id >= 0 and id <= (len(self.packets) - 1):
+                            outpackets.append(self.packets[id])
+
+                pcapnamelist = self.inpcap.split('.')
+                ext = pcapnamelist[-1]
+                del pcapnamelist[-1]
+                pcapnamelist.append('mod')
+                pcapnamelist.append(ext)
+                self.outpcap = '.'.join(pcapnamelist)
+                wrpcap(self.outpcap, outpackets)
+                print 'Wrote %d packets to %s' % (len(outpackets), self.outpcap)
+
+            else:
+                pcapnamelist = self.inpcap.split('.')
+                ext = pcapnamelist[-1]
+                del pcapnamelist[-1]
+                pcapnamelist.append('mod')
+                pcapnamelist.append(ext)
+                self.outpcap = '.'.join(pcapnamelist)
+                wrpcap(self.outpcap, self.packets)
+                print 'Wrote %d packets to %s' % (len(self.packets), self.outpcap)
+
         else:
             print 'Nothing to save! Use \'analyze\' first.'
 
@@ -540,7 +612,7 @@ class editor(Cmd):
 
     def do_commands(self, line):
         print
-        print '\t[01] analyze ......... loads a pcap for analysis'
+        print '\t[01] analyze ......... load a pcap for analysis'
         print '\t[02] ls .............. list packet details'
         print '\t[03] summary ......... show summary of a packet'
         print '\t[04] hexdump ......... show hexdump of a packet'

@@ -2,8 +2,9 @@ analyze http.cap
 
 edit 6
 
-set ether.src aa:cc:bb
-set ether.dst xx:yy:zz
+set ether.src 11:22:33:44:55
+set ether.dst 55:44:33:22:11
+set ether.type 2048
 
 set ip.version 88
 set ip.ihl 56
@@ -32,6 +33,8 @@ set tcp.urgptr 67
 set tcp.options 98
 
 summary
+
+save 1-11
 
 exit
 

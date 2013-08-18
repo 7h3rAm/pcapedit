@@ -2,8 +2,8 @@ analyze http.cap
 
 edit 12
 
-set ether.src aa:cc:bb
-set ether.dst xx:yy:zz
+set ether.src 11:22:33:44:55
+set ether.dst 55:44:33:22:11
 
 set ip.version 88
 set ip.ihl 56
@@ -43,6 +43,8 @@ set dns.ns 16
 set dns.ar 17
 
 summary
+
+save
 
 exit
 
