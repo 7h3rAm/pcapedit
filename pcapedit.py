@@ -19,9 +19,6 @@ class editor(Cmd):
     editid = -1
     inpcap = None
     outpcap = None
-    customipchksum = False
-    customtcpchksum = False
-    customudpchksum = False
 
     def help_analyze(self):
         print 'USAGE: analyze <pcapfile>'
@@ -33,17 +30,35 @@ class editor(Cmd):
                 self.inpcap = line
                 self.packets = rdpcap(self.inpcap)
 
+                for packet in self.packets:
+                    if packet.haslayer(IP): packet.getlayer(IP).chksum = None
+                    if packet.haslayer(TCP): packet.getlayer(TCP).chksum = None
+                    if packet.haslayer(UDP): packet.getlayer(UDP).chksum = None
+
                 self.editid = -1
                 self.outpcap = None
-                self.customipchksum = False
-                self.customtcpchksum = False
-                self.customudpchksum = False
+                self.prompt = '(%s) >>> ' % (self.inpcap)
 
                 print 'Read %d packets from %s' % (len(self.packets), self.inpcap)
             else:
                 print '%s doesn\'t exist!' % (line)
         else:
             self.help_analyze()
+
+    def help_back(self):
+        print 'USAGE: back'
+        print 'Move one level backwards from current context'
+ 
+    def do_back(self, line):
+        if self.inpcap:
+            if self.editid != -1:
+                self.editid = -1
+                self.prompt = '(%s) >>> ' % (self.inpcap)
+            else:
+                self.prompt = '>>> '
+                self.packets = []
+                self.inpcap = None
+                self.outpcap = None
 
     def help_ls(self):
         print 'USAGE: ls [packetid]'
@@ -277,15 +292,11 @@ class editor(Cmd):
                 id = int(line)
                 if id >= 0 and id <= (len(self.packets) - 1):
                     self.editid = id
+                    self.prompt = '(%s|#%d) >>> ' % (self.inpcap, self.editid)
                     print 'Editing packet id: %d' % (self.editid)
                     self.do_summary(line)
                 else:
-                    print 'Packet %d not found! Available %d - %d' % (
-                            id,
-                            0,
-                            (len(self.packets) - 1))
-            else:
-                self.editid = -1
+                    print 'Packet %d not found! Available %d - %d' % (id, 0, (len(self.packets) - 1))
         else:
             print 'Nothing to edit! Use \'analyze\' first.'
 
@@ -436,9 +447,6 @@ class editor(Cmd):
                                                         oldeditvalue = packet[setproto].options
                                                         packet[setproto].options = str(setvalue)
 
-                                                    if not self.customipchksum:
-                                                        packet[setproto].chksum = None
-
                                                 elif setproto == 'TCP':
                                                     if key == 'sport' and setfield == 'sport':
                                                         oldeditvalue = packet[setproto].sport
@@ -474,9 +482,6 @@ class editor(Cmd):
                                                     if key == 'options' and setfield == 'options':
                                                         oldeditvalue = packet[setproto].options
                                                         packet[setproto].options = int(setvalue)
-
-                                                    if not self.customtcpchksum:
-                                                        packet[setproto].chksum = None
 
                                             print '%6d: %s.%s: %s -> %s (coz %s.%s is %s)' % (
                                                     count,
@@ -555,7 +560,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][IP].chksum
                                 self.packets[self.editid].getlayer(IP).chksum = int(editvalue)
                                 print '%6d: IP.chksum: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(IP).chksum)
-                                self.customipchksum = True
                             elif re.search(r'(?i)^src$', editfield):
                                 oldeditvalue = self.packets[self.editid][IP].src
                                 self.packets[self.editid].getlayer(IP).src = str(editvalue)
@@ -568,9 +572,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][IP].options
                                 self.packets[self.editid].getlayer(IP).options = str(editvalue)
                                 print '%6d: IP.options: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(IP).options)
-
-                            if not self.customipchksum:
-                                self.packets[self.editid].getlayer(IP).chksum = None
 
                     elif re.search(r'(?i)^tcp$', editproto):
                         editproto = 'TCP'
@@ -599,6 +600,10 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][TCP].reserved
                                 self.packets[self.editid].getlayer(TCP).reserved = int(editvalue)
                                 print '%6d: TCP.reserved: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).reserved)
+                            elif re.search(r'(?i)^ttl$', editfield):
+                                oldeditvalue = self.packets[self.editid][TCP].ttl
+                                self.packets[self.editid].getlayer(TCP).ttl = int(editvalue)
+                                print '%6d: TCP.ttl: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).ttl)
                             elif re.search(r'(?i)^flags$', editfield):
                                 oldeditvalue = self.packets[self.editid][TCP].flags
                                 self.packets[self.editid].getlayer(TCP).flags = int(editvalue)
@@ -611,7 +616,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][TCP].chksum
                                 self.packets[self.editid].getlayer(TCP).chksum = int(editvalue)
                                 print '%6d: TCP.chksum: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).chksum)
-                                customtcpchksum = True
                             elif re.search(r'(?i)^urgptr$', editfield):
                                 oldeditvalue = self.packets[self.editid][TCP].urgptr
                                 self.packets[self.editid].getlayer(TCP).urgptr = int(editvalue)
@@ -620,9 +624,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][TCP].options
                                 #self.packets[self.editid].getlayer(TCP).options = dict(editvalue)
                                 print '%6d: TCP.options: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(TCP).options)
-
-                            if not self.customtcpchksum:
-                                self.packets[self.editid].getlayer(TCP).chksum = None
 
                     elif re.search(r'(?i)^udp$', editproto):
                         editproto = 'UDP'
@@ -643,10 +644,6 @@ class editor(Cmd):
                                 oldeditvalue = self.packets[self.editid][UDP].chksum
                                 self.packets[self.editid].getlayer(UDP).chksum = int(editvalue)
                                 print '%6d: UDP.chksum: %s -> %s' % (self.editid, oldeditvalue, self.packets[self.editid].getlayer(UDP).chksum)
-                                customudpchksum = True
-
-                            if not self.customudpchksum:
-                                self.packets[self.editid].getlayer(UDP).chksum = None
 
                     elif re.search(r'(?i)^dns$', editproto):
                         editproto = 'DNS'
@@ -744,9 +741,9 @@ class editor(Cmd):
 
     def do_save(self, line):
         if self.packets and len(self.packets) > 0:
-            if line != '':
-                outpackets = []
+            outpackets = []
 
+            if line != '':
                 if re.search(r'(\d+)?\s*-\s*(\d+)?', line):
 
                     offsetlist = re.findall(r'\d+', line)
@@ -787,28 +784,23 @@ class editor(Cmd):
                         if id >= 0 and id <= (len(self.packets) - 1):
                             outpackets.append(self.packets[id])
 
-                if not self.outpcap:
-                    pcapnamelist = self.inpcap.split('.')
-                    ext = pcapnamelist[-1]
-                    del pcapnamelist[-1]
-                    pcapnamelist.append('mod')
-                    pcapnamelist.append(ext)
-                    self.outpcap = '.'.join(pcapnamelist)
-
-                wrpcap(self.outpcap, outpackets)
-                print 'Wrote %d packets to %s' % (len(outpackets), self.outpcap)
+            elif self.editid != -1:
+                outpackets.append(self.packets[self.editid])
 
             else:
-                if not self.outpcap:
-                    pcapnamelist = self.inpcap.split('.')
-                    ext = pcapnamelist[-1]
-                    del pcapnamelist[-1]
-                    pcapnamelist.append('mod')
-                    pcapnamelist.append(ext)
-                    self.outpcap = '.'.join(pcapnamelist)
+                for packet in self.packets:
+                    outpackets.append(packet)
 
-                wrpcap(self.outpcap, self.packets)
-                print 'Wrote %d packets to %s' % (len(self.packets), self.outpcap)
+            if not self.outpcap:
+                pcapnamelist = self.inpcap.split('.')
+                ext = pcapnamelist[-1]
+                del pcapnamelist[-1]
+                pcapnamelist.append('mod')
+                pcapnamelist.append(ext)
+                self.outpcap = '.'.join(pcapnamelist)
+
+            wrpcap(self.outpcap, outpackets)
+            print 'Wrote %d packet(s) to %s' % (len(outpackets), self.outpcap)
 
         else:
             print 'Nothing to save! Use \'analyze\' first.'
