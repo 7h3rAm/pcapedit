@@ -32,6 +32,13 @@ class editor(Cmd):
             if os.path.isfile(line):
                 self.inpcap = line
                 self.packets = rdpcap(self.inpcap)
+
+                self.editid = -1
+                self.outpcap = None
+                self.customipchksum = False
+                self.customtcpchksum = False
+                self.customudpchksum = False
+
                 print 'Read %d packets from %s' % (len(self.packets), self.inpcap)
             else:
                 print '%s doesn\'t exist!' % (line)
