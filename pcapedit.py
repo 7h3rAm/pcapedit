@@ -325,7 +325,7 @@ class editor(Cmd):
                     self.help_set()
                     return
 
-                if len(setargslist) >= 4:
+                if len(setargslist) >= 4 and self.editid == -1:
                     setkey = setargslist[0]
                     setproto = setkey.split('.')[0]
                     setfield = setkey.split('.')[1]
