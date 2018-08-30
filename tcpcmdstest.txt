@@ -36,5 +36,5 @@ summary
 
 save 1-11
 
-exit
+quit
 

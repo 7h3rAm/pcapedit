@@ -46,5 +46,5 @@ summary
 
 save
 
-exit
+quit
 
