@@ -132,6 +132,14 @@ class editor(Cmd):
     else:
       self.help_analyze()
 
+  def complete_analyze(self, text, line, begidx, endidx):
+    index_dict = \
+      {
+         1: self.path_complete,
+      }
+
+    return self.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)
+
   def help_back(self):
     print('USAGE: back')
     print('Move one level backwards from current context')
