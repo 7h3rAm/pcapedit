@@ -1,10 +1,13 @@
 analyze http.cap
+!echo
 
 edit 6
+!echo
 
 set ether.src 11:22:33:44:55
 set ether.dst 55:44:33:22:11
 set ether.type 2048
+!echo
 
 set ip.version 88
 set ip.ihl 56
@@ -19,6 +22,7 @@ set ip.chksum 78
 set ip.src 12
 set ip.dst 21
 set ip.options 99
+!echo
 
 set tcp.sport 1234
 set tcp.dport 4321
@@ -31,10 +35,9 @@ set tcp.window 36
 set tcp.chksum 88
 set tcp.urgptr 67
 set tcp.options 98
+!echo
 
 summary
+!echo
 
 save 1-11
-
-quit
-

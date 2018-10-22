@@ -1,9 +1,12 @@
 analyze http.cap
+!echo
 
 edit 12
+!echo
 
 set ether.src 11:22:33:44:55
 set ether.dst 55:44:33:22:11
+!echo
 
 set ip.version 88
 set ip.ihl 56
@@ -18,11 +21,13 @@ set ip.chksum 78
 set ip.src 12
 set ip.dst 21
 set ip.options 99
+!echo
 
 set udp.sport 4321
 set udp.dport 1234
 set udp.len 99
 set udp.chksum 81
+!echo
 
 set dns.id 1
 set dns.qr 2
@@ -41,10 +46,10 @@ set dns.qd 14
 set dns.an 15
 set dns.ns 16
 set dns.ar 17
+!echo
 
 summary
+!echo
 
 save
-
-quit
-
+!echo

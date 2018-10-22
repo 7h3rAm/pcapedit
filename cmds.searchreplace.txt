@@ -1,0 +1,16 @@
+analyze http.cap
+!echo
+
+set ip.src 1.1.1.1 ip.src 145.254.160.237
+set ip.dst 1.1.1.1 ip.dst 145.254.160.237
+!echo
+
+set ip.src 2.2.2.2 ip.src 65.208.228.223
+set ip.dst 2.2.2.2 ip.dst 65.208.228.223
+!echo
+
+summary
+!echo
+
+save
+!echo
