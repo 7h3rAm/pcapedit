@@ -1,0 +1,29 @@
+search
+!echo
+
+analyze http.cap
+!echo
+
+!echo search for tcp packets
+search --key ip.proto --value 6
+!echo
+
+!echo search for udp packets
+search --key ip.proto --value 17
+!echo
+
+!echo search for raw string
+search --key pay.load --value "(?i)Google"
+!echo
+
+!echo search for raw string
+search --key dns.ns --value "test"
+!echo
+
+!echo search for raw string
+search --key pay.load --value ".*"
+!echo
+
+!echo search within ether packets
+search --key ether.src --value 00:00:01:00:00:00
+!echo
