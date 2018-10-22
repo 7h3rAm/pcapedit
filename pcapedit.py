@@ -1,14 +1,21 @@
 #!/usr/bin/env python
 
-import os, sys, re, binascii
+import os
+import re
+import sys
+import binascii
+import argparse
+from cmd2 import with_argparser
 
 from cmd2 import Cmd
 from datetime import datetime
 
 import logging
 logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
+
 from scapy.all import *
 from scapy.utils import *
+
 
 class editor(Cmd):
   intro = 'PcapEdit - An Interactive Pcap Editor\n'
@@ -18,6 +25,77 @@ class editor(Cmd):
   editid = -1
   inpcap = None
   outpcap = None
+
+  protodict = {
+    "ether": {
+      "scapyproto": "Ether",
+      "src": str,
+      "dst": str,
+      "type": int
+    },
+    "ip": {
+      "scapyproto": "IP",
+      "version": int,
+      "ihl": int,
+      "tos": int,
+      "len": int,
+      "id": int,
+      "flags": int,
+      "frag": int,
+      "ttl": int,
+      "proto": int,
+      "chksum": int,
+      "src": str,
+      "dst": str,
+      "options": int
+    },
+    "tcp": {
+      "scapyproto": "TCP",
+      "sport": int,
+      "dport": int,
+      "seq": int,
+      "ack": int,
+      "dataofs": int,
+      "reserved": int,
+      "ttl": int,
+      "flags": int,
+      "window": int,
+      "chksum": int,
+      "urgptr": int,
+      "options": int
+    },
+    "udp": {
+      "scapyproto": "UDP",
+      "sport": int,
+      "dport": int,
+      "len": int,
+      "chksum": int
+    },
+    "dns": {
+      "scapyproto": "DNS",
+      "id": int,
+      "qr": int,
+      "opcode": int,
+      "aa": int,
+      "tc": int,
+      "rd": int,
+      "ra": int,
+      "z": int,
+      "rcode": int,
+      "qdcount": int,
+      "ancount": int,
+      "nscount": int,
+      "arcount": int,
+      "qd": int,
+      "an": int,
+      "ns": int,
+      "ar": int
+    },
+    "pay": {
+      "scapyproto": "RAW",
+      "load": str
+    }
+  }
 
   def help_analyze(self):
     print 'USAGE: analyze <pcapfile>'
@@ -77,6 +155,7 @@ class editor(Cmd):
       else:
         print 'No packetid to ls! Pass one as argument or use \'edit\' first.'
         self.help_ls()
+        return
     else:
       print 'Nothing to ls! Use \'analyze\' first.'
 
@@ -199,6 +278,7 @@ class editor(Cmd):
       else:
         print 'No packetid to hexdump! Pass one as argument or use \'edit\' first.'
         self.help_hexdump()
+        return
     else:
       print 'Nothing to hexdump! Use \'analyze\' first.'
 
@@ -214,15 +294,13 @@ class editor(Cmd):
         if id >= 0 and id <= (len(self.packets) - 1):
           print self.packets[id].pdfdump()
         else:
-          print 'Packet %d not found! Available %d - %d' % (
-              id,
-              0,
-              (len(self.packets) - 1))
+          print 'Packet %d not found! Available %d - %d' % (id, 0, (len(self.packets) - 1))
       elif self.editid != -1:
         print self.packets[self.editid].pdfdump()
       else:
         print 'No packetid to dump! Pass one as argument or use \'edit\' first.'
         self.help_pdfdump()
+        return
     else:
       print 'Nothing to dump! Use \'analyze\' first.'
 
@@ -244,6 +322,7 @@ class editor(Cmd):
       else:
         print 'No packetid to show as Scapy command! Pass one as argument or use \'edit\' first.'
         self.help_scapycmd()
+        return
     else:
       print 'Nothing to show as Scapy command! Use \'analyze\' first.'
 
@@ -265,6 +344,7 @@ class editor(Cmd):
       else:
         print 'No packetid to show in wireshark! Pass one as argument or use \'edit\' first.'
         self.help_wireshark()
+        return
     else:
       print 'Nothing to show in wireshark! Use \'analyze\' first.'
 
@@ -296,6 +376,50 @@ class editor(Cmd):
     if line != '': self.outpcap = line
     else: self.outpcap = None
     print 'outpcap: %s' % (self.outpcap)
+
+  def help_search(self):
+    print 'USAGE: search <key> <value>'
+    print 'Where key: ((ether|ip|tcp|udp|dns).field|data)'
+    print 'Valid fields are the ones listed in \'ls\''
+
+  argparser = argparse.ArgumentParser()
+  argparser.add_argument("-k", "--key", action="store", help="search key (ether|ip|tcp|udp|dns|pay).field")
+  argparser.add_argument("-v", "--value", action="store", help="search value")
+  @with_argparser(argparser)
+  def do_search(self, args):
+    if not self.packets or len(self.packets) == 0:
+      print 'Nothing to search! Use \'analyze\' first.'
+      return
+    if not args.key or not args.value:
+      self.help_search()
+      return
+    searchproto = args.key.split(".")[0].lower()
+    searchfield = args.key.split(".")[1].lower()
+    searchvalue = args.value
+    if searchproto in self.protodict and searchfield in self.protodict[searchproto]:
+      # cast searchvalue as per expected protofield datatype
+      try:
+        searchvalue = self.protodict[searchproto][searchfield](searchvalue)
+      except:
+        print "Incorrect searchvalue '%s' for protofield '%s.%s', expected %s" % (searchvalue, searchproto, searchfield, self.protodict[searchproto][searchfield])
+        return
+      scapyproto = self.protodict[searchproto]["scapyproto"]
+      if self.editid == -1:
+        count, matches = 0, []
+        for idx, packet in enumerate(self.packets):
+          if packet.haslayer(scapyproto) and searchfield in packet[scapyproto].fields.keys():
+            if packet[scapyproto].fields[searchfield] == searchvalue:
+              matches.append(idx+1)
+          # searchfield is of no signfifcance for searchproto == pay; but enforcing this scheme
+          if searchproto == "pay" and searchfield == "load":
+            if Raw in self.packets[idx] and re.search(searchvalue, self.protodict[searchproto][searchfield](self.packets[idx][Raw])):
+              matches.append(idx+1)
+        print "Found %d matches for search query '%s in %s.%s': %s" % (len(matches), searchvalue, searchproto.lower(), searchfield, ", ".join([str(x) for x in sorted(matches)]))
+      else:
+        print "searching packet #%d" % (self.editid)
+    else:
+      self.help_search()
+      return
 
   def help_set(self):
     print 'USAGE: set <key> <value> [<key> <value>]'
@@ -336,7 +460,7 @@ class editor(Cmd):
           if re.search(r'(?i)^pay$', searchproto) and re.search(r'(?i)^load$', searchfield): searchproto = 'Raw'
 
           if setproto == 'Raw' and searchproto == 'Raw':
-            print 'Replacing %s.%s with regex \'%s\' where %s.%s matches regex \'%s\'' % (
+            print 'Replacing %s.%s with value \'%s\' where %s.%s matches regex \'%s\'' % (
                 setproto,
                 setfield,
                 setvalue,
@@ -711,9 +835,10 @@ class editor(Cmd):
             print 'Unknown proto: %s' % (editproto)
 
         else:
-          print 'No editid to set!'
+          print 'No editid to set! Pass one as argument or use \'edit\' first.'
       else:
         self.help_set()
+        return
     else:
       print 'Nothing to set! Use \'analyze\' first.'
 
