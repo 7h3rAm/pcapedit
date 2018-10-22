@@ -1,0 +1,55 @@
+analyze http.cap
+!echo
+
+edit 12
+!echo
+
+set ether.src 11:22:33:44:55
+set ether.dst 55:44:33:22:11
+!echo
+
+set ip.version 88
+set ip.ihl 56
+set ip.tos 33
+set ip.len 36
+set ip.id 12
+set ip.flags 81
+set ip.frag 22
+set ip.ttl 27
+set ip.proto 15
+set ip.chksum 78
+set ip.src 12
+set ip.dst 21
+set ip.options 99
+!echo
+
+set udp.sport 4321
+set udp.dport 1234
+set udp.len 99
+set udp.chksum 81
+!echo
+
+set dns.id 1
+set dns.qr 2
+set dns.opcode 3
+set dns.aa 4
+set dns.tc 5
+set dns.rd 6
+set dns.ra 7
+set dns.z 8
+set dns.rcode 9
+set dns.qdcount 10
+set dns.ancount 11
+set dns.nscount 12
+set dns.arcount 13
+set dns.qd 14
+set dns.an 15
+set dns.ns 16
+set dns.ar 17
+!echo
+
+summary
+!echo
+
+save
+!echo
