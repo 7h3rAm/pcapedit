@@ -5,6 +5,8 @@ import re
 import sys
 import binascii
 import argparse
+import readline
+import atexit
 from cmd2 import with_argparser
 
 from cmd2 import Cmd
@@ -16,10 +18,18 @@ logging.getLogger('scapy.runtime').setLevel(logging.ERROR)
 from scapy.all import *
 from scapy.utils import *
 
+history_file = os.path.expanduser('~/.pcapedit_history')
+if not os.path.exists(history_file):
+  with open(history_file, "w") as fobj:
+    fobj.write("")
+
+readline.read_history_file(history_file)
+atexit.register(readline.write_history_file, history_file)
 
 class editor(Cmd):
   intro = 'PcapEdit - An Interactive Pcap Editor\n'
   prompt = '>>> '
+  quit_on_sigint = True
 
   packets = []
   editid = -1
