@@ -3,7 +3,7 @@ contextlib2==0.5.5
 enum34==1.1.6
 pyparsing==2.2.0
 pyperclip==1.6.4
-scapy==2.4.0
+scapy==2.4.1
 six==1.11.0
 subprocess32==3.5.2
 wcwidth==0.1.7
